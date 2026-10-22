@@ -37,13 +37,13 @@ print(f"trained on {X.shape[0]} rows x {X.shape[1]} features")
 print(f"accuracy on the training set: {model.score(X, y):.4f}")
 
 # --- prediction and submission ------------------------------------------
-# Submission format copied from the example code on the competition's Overview
-# page: a column named "Quality", with the index named "ID" so that the row
-# numbers 0..208 are written out as the ID column.
+# Submission format: a column named "quality" with the index named "Id", so the
+# row numbers 0..208 are written out as the ID column. Kaggle rejects any file
+# whose ID column is spelled "ID".
 predictions = model.predict(test[features].to_numpy())
-submission = pd.DataFrame(predictions, columns=["Quality"])
-submission.index.name = "ID"
-submission[["Quality"]].to_csv("submission.csv")
+submission = pd.DataFrame(predictions, columns=["quality"])
+submission.index.name = "Id"
+submission[["quality"]].to_csv("submission.csv")
 
 print(f"wrote submission.csv: {submission.shape[0]} rows")
-print("predicted classes:", submission["Quality"].value_counts().to_dict())
+print("predicted classes:", submission["quality"].value_counts().to_dict())

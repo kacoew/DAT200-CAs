@@ -37,10 +37,13 @@ print(f"trained on {X.shape[0]} rows x {X.shape[1]} features")
 print(f"accuracy on the training set: {model.score(X, y):.4f}")
 
 # --- prediction and submission ------------------------------------------
-# Kaggle keys on test.csv's own Id column, not on the row position.
+# Submission format copied from the example code on the competition's Overview
+# page: a column named "Quality", with the index named "ID" so that the row
+# numbers 0..208 are written out as the ID column.
 predictions = model.predict(test[features].to_numpy())
-submission = pd.DataFrame({"Id": test["Id"], "quality": predictions})
-submission.to_csv("submission.csv", index=False)
+submission = pd.DataFrame(predictions, columns=["Quality"])
+submission.index.name = "ID"
+submission[["Quality"]].to_csv("submission.csv")
 
 print(f"wrote submission.csv: {submission.shape[0]} rows")
-print("predicted classes:", submission["quality"].value_counts().to_dict())
+print("predicted classes:", submission["Quality"].value_counts().to_dict())

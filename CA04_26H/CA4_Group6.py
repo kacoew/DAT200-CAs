@@ -417,14 +417,42 @@ print(results.round(3).to_string(index=False))
 # Logistic regression is clearly worst (0.662): it can only draw a straight decision boundary,
 # while churn depends on non-linear patterns (e.g. churn jumps for customers with many
 # customer service calls or a very high total bill).
-# Adding TotalCharge raised the random forest from 0.854 to 0.946: trees split on one column
-# at a time and could not build the total bill from the four separate charge columns themselves.
 # We choose the random forest as our final model for section 7 and the Kaggle submission.
+
+
+# In[19]:
+
+
+# Feature comparison: how much did each feature decision help the random forest?
+# Same 60% training part, same 5-fold CV and same hyperparameter grid as above; only the features differ.
+base_numeric = [col for col in numeric_features if col != "TotalCharge"]   # the 11 numeric features without TotalCharge
+
+feature_sets = {
+    "Original (no TotalCharge, with State + AreaCode)": (base_numeric, ["State", "AreaCode", "InternationalPlan", "VoiceMailPlan"]),
+    "No TotalCharge, without State + AreaCode": (base_numeric, ["InternationalPlan", "VoiceMailPlan"]),
+}
+
+comparison = []
+for name, (num_cols, cat_cols) in feature_sets.items():
+    prep = ColumnTransformer([("num", StandardScaler(), num_cols),
+                              ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat_cols)])
+    pipe = Pipeline([("prep", prep), ("rf", RandomForestClassifier(random_state=42))])
+    gs = GridSearchCV(pipe, param_grid_rf, scoring="f1_macro", cv=cv, n_jobs=-1)
+    gs.fit(train.loc[X_train.index, num_cols + cat_cols], y_train)   # exactly the same 60% customers as X_train
+    comparison.append({"Features": name, "Best CV macro F1": gs.best_score_})
+
+# the final feature set is the random forest tuned above (gs_rf)
+comparison.append({"Features": "Final (TotalCharge, without State + AreaCode)", "Best CV macro F1": gs_rf.best_score_})
+print(pd.DataFrame(comparison).round(3).to_string(index=False))
+
+# Dropping State and AreaCode raised the random forest from 0.854 to 0.883 (less noise from 51 + 3 one-hot columns).
+# Adding TotalCharge raised it further from 0.883 to 0.946, the biggest single improvement:
+# trees split on one column at a time and could not build the total bill from the four separate charge columns themselves.
 
 
 # ### 7. Final evaluation
 
-# In[19]:
+# In[20]:
 
 
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, ConfusionMatrixDisplay, classification_report
@@ -454,7 +482,7 @@ plt.show()
 # (recall for churn = 0.85), which is the more costly mistake for the company.
 
 
-# In[20]:
+# In[21]:
 
 
 # Compare all three tuned pipelines on the same 40% holdout
@@ -469,19 +497,13 @@ print(holdout_results.round(3).to_string(index=False))
 # The holdout scores confirm the cross-validation ranking: random forest > SVC > logistic regression.
 
 
-# In[ ]:
-
-
-
-
-
 # ### 8. Kaggle submission
 
 # The submission format follows `sample_submissionCA4DAT200.csv`: two columns, `CustomerId` and `Churn` (0 or 1), with one row for each of the 1500 customers in the test set, in the same order as `testCA4DAT200.csv`.
 # 
 # The final model is the tuned random forest from section 6, refitted on the entire training set (all 3500 customers) before predicting, so it learns from as much data as possible. No rows are removed from the test set, since every customer needs a prediction.
 
-# In[21]:
+# In[22]:
 
 
 from sklearn.base import clone
